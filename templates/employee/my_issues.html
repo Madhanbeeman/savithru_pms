@@ -1,0 +1,54 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}My Submitted Issues{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title mb-0">My Submitted Issues</h1>
+    <a href="{% url 'submit_issue' %}" class="btn btn-primary">
+        + Submit New Issue
+    </a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <div class="list-group list-group-flush">
+            {% for issue in issues %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-medium">{{ issue.get_subject_display }}</span>
+                        <small class="d-block text-muted">{{ issue.created_at|date:"M d, Y" }}</small>
+                    </div>
+                    <div>
+                        {% if issue.status == 'PENDING' %}
+                            <span class="badge bg-warning-lt">Pending</span>
+                        {% elif issue.status == 'ACCEPTED' %}
+                            <span class="badge bg-success-lt">Accepted</span>
+                        {% elif issue.status == 'DECLINED' %}
+                            <span class="badge bg-danger-lt">Declined</span>
+                        {% elif issue.status == 'WFH_APPROVED' %}
+                            <span class="badge bg-info-lt">WFH Approved</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0">{{ issue.description|truncatewords:20 }}</p>
+            </div>
+            {% empty %}
+            <div class="list-group-item">
+                <p class="text-muted text-center mb-0">You have not submitted any issues.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

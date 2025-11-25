@@ -1,0 +1,216 @@
+{% extends base_template %}
+{% load static %}
+{% load pms_extras %}
+
+{% block title %}Daily Updates{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Calendar styles (same as before) */
+    .calendar-container { max-width: 1200px; margin: auto; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .calendar-day { 
+        position: relative; padding-bottom: 100%; height: 0; 
+        background-color: #fff; border: 1px solid #ddd; border-radius: 8px; 
+        cursor: pointer; transition: 0.2s;
+    }
+    .calendar-day:hover { background-color: #f8f9fa; transform: scale(1.02); }
+    .calendar-day.today { border: 2px solid #0d6efd; }
+    .day-content { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; overflow: hidden; }
+    .day-number { font-weight: bold; font-size: 1.1rem; }
+    .update-dot { 
+        height: 8px; width: 8px; background-color: #20c997; 
+        border-radius: 50%; display: inline-block; margin-top: 5px; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <div class="calendar-header">
+        <a href="{% url 'daily_updates_nav' year=prev_month_date.year month=prev_month_date.month %}" class="btn btn-outline-secondary">&lt;</a>
+        <h2>{{ month_name }} {{ year }}</h2>
+        <a href="{% url 'daily_updates_nav' year=next_month_date.year month=next_month_date.month %}" class="btn btn-outline-secondary">&gt;</a>
+    </div>
+
+    <div class="calendar-grid">
+        <div class="fw-bold text-center">Mon</div>
+        <div class="fw-bold text-center">Tue</div>
+        <div class="fw-bold text-center">Wed</div>
+        <div class="fw-bold text-center">Thu</div>
+        <div class="fw-bold text-center">Fri</div>
+        <div class="fw-bold text-center">Sat</div>
+        <div class="fw-bold text-center">Sun</div>
+
+        {% for week in month_days %}
+            {% for day in week %}
+                {% if day == 0 %}
+                    <div class="calendar-day" style="background: #f0f0f0; cursor: default;"></div>
+                {% else %}
+                    <div class="calendar-day {% if day == today_num %}today{% endif %}" 
+                         {% if day == today_num %}data-bs-toggle="modal" data-bs-target="#dailyUpdateModal"{% endif %}>
+                        
+                        <div class="day-content">
+                            <div class="day-number">{{ day }}</div>
+                            
+                            {% if day in updates_dict %}
+                                <div class="text-success small mt-1">
+                                    <span class="update-dot"></span> Submitted
+                                </div>
+                                {% elif day == today_num %}
+                                <div class="text-primary small mt-1">+ Add</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="dailyUpdateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Daily Update for Today</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="POST" id="update-form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    
+                    <label class="form-label fw-bold">Tasks & Time</label>
+                    
+                    {{ formset.management_form }}
+                    
+                    <table class="table table-vcenter card-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%">Project</th>
+                                <th style="width: 35%">Task</th>
+                                <th style="width: 20%">Time</th>
+                                <th style="width: 10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="formset-container">
+                            {% for form in formset %}
+                            <tr class="form-row">
+                                <td>
+                                    {{ form.id }} {{ form.project }}
+                                </td>
+                                <td>
+                                    {{ form.task_page }}
+                                </td>
+                                <td>
+                                    {{ form.time_spent }}
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-icon btn-danger btn-sm remove-row">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-row-btn">
+                        + Add Task
+                    </button>
+                    
+                    <hr class="my-3">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.description.label }}</label>
+                        {{ form.description }}
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit_daily_update" class="btn btn-primary">Submit Update</button>
+                </div>
+            </form>
+            
+            <div id="empty-form" style="display:none">
+                <table>
+                    <tr class="form-row">
+                        <td>{{ formset.empty_form.project }}</td>
+                        <td>{{ formset.empty_form.task_page }}</td>
+                        <td>{{ formset.empty_form.time_spent }}</td>
+                        <td>
+                            <button type="button" class="btn btn-icon btn-danger btn-sm remove-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('formset-container');
+        const addBtn = document.getElementById('add-row-btn');
+        const totalForms = document.getElementById('id_daily_update_line_items-TOTAL_FORMS');
+        const emptyFormHtml = document.getElementById('empty-form').querySelector('tr').outerHTML;
+
+        // --- 1. Add New Row Logic ---
+        addBtn.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const newRowHtml = emptyFormHtml.replace(/__prefix__/g, formCount);
+            
+            container.insertAdjacentHTML('beforeend', newRowHtml);
+            totalForms.value = formCount + 1;
+            
+            // Re-bind events for the new row
+            bindProjectChangeEvents();
+        });
+
+        // --- 2. Remove Row Logic ---
+        container.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-row')) {
+                const row = e.target.closest('.form-row');
+                row.remove();
+                // Note: We don't decrement TOTAL_FORMS because Django handles gaps,
+                // but cleaner logic would re-index. For simplicity, we leave it.
+            }
+        });
+
+        // --- 3. AJAX: Load Tasks when Project Changes ---
+        function bindProjectChangeEvents() {
+            const projectSelects = document.querySelectorAll('.project-select');
+            
+            projectSelects.forEach(select => {
+                // Avoid binding twice
+                if (select.getAttribute('data-bound') === 'true') return;
+                select.setAttribute('data-bound', 'true');
+
+                select.addEventListener('change', function() {
+                    const url = "{% url 'ajax_load_tasks' %}";
+                    const projectId = this.value;
+                    // Find the task select in the same row
+                    const row = this.closest('tr');
+                    const taskSelect = row.querySelector('.task-select');
+
+                    fetch(`${url}?project_id=${projectId}`)
+                        .then(response => response.text())
+                        .then(html => {
+                            taskSelect.innerHTML = html;
+                        });
+                });
+            });
+        }
+
+        // Initial bind
+        bindProjectChangeEvents();
+    });
+</script>
+{% endblock %}

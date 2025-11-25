@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Management{% endblock %} - Savithru PMS</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler-vendors.min.css" rel="stylesheet" />
+    
+    <style>
+        :root { --tblr-primary: #0054a6; }
+        body { background-color: #f4f6fa; }
+        
+        /* Chat & Timeline Styles */
+        .chat-container { height: 75vh; }
+        .message { border-radius: 10px !important; border: none !important; }
+        .message-sent { background-color: #d2e7ff !important; color: #111 !important; }
+        .message-received { background-color: #ffffff !important; color: #111 !important; }
+        
+        /* General UI Fixes */
+        .card-grid .card.h-100 { display: flex; flex-direction: column; }
+        .card-grid .card.h-100 .card-body { flex-grow: 1; }
+        .avatar-xl { width: 4rem; height: 4rem; font-size: 2rem; border-radius: var(--tblr-border-radius-lg); }
+        .avatar { border-radius: 50%; }
+        
+        /* Badge Animation */
+        .badge-blink { animation: blink 2s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes soft-red-blink {
+            0% { box-shadow: 0 0 0 0 rgba(214, 57, 57, 0.4); background-color: #fff; border-color: #e6e7e9; }
+            50% { box-shadow: 0 0 0 4px rgba(214, 57, 57, 0.1); background-color: #fff5f5; border-color: #d63939; }
+            100% { box-shadow: 0 0 0 0 rgba(214, 57, 57, 0.4); background-color: #fff; border-color: #e6e7e9; }
+        }
+        
+        .project-urgent {
+            animation: soft-red-blink 2s infinite;
+            border: 1px solid #d63939 !important; /* Red Border */
+        }
+        
+        .badge-urgent {
+            background-color: #d63939;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="theme-light">
+    <div class="page">
+        <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark">
+                    <a href="{% url 'management_dashboard' %}">Savithru PMS</a>
+                </h1>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        
+                        <li class="nav-item {% if request.resolver_match.url_name == 'management_dashboard' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'management_dashboard' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg></span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item {% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'project_list' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-briefcase" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2" /></svg></span>
+                                <span class="nav-link-title">Projects</span>
+                            </a>
+                        </li>
+
+                        {% if request.user.role == 'MANAGEMENT' %}
+                        <li class="nav-item {% if 'employee' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'manage_employees' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg></span>
+                                <span class="nav-link-title">Employees</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="nav-item {% if 'daily_update' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'daily_updates' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-message-report" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /></svg></span>
+                                <span class="nav-link-title">Daily Updates</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item {% if 'issue' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'issues' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg></span>
+                                <span class="nav-link-title">Issues</span>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item {% if 'calendar' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'calendar_view' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M11 15h1" /><path d="M12 15v3" /></svg></span>
+                                <span class="nav-link-title">Calendar</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
+            <div class="container-xl">
+                <div class="navbar-nav flex-row order-md-last">
+                    {% if request.user.role == 'MANAGEMENT' %}
+                    <div class="nav-item me-3">
+                        <a href="{% url 'add_project' %}" class="btn btn-primary">+ New Project</a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="nav-item me-3">
+                        <a href="{% url 'notification_list' %}" class="nav-link px-0" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>
+                            {% if unread_count > 0 %}
+                            <span class="badge bg-red rounded-pill badge-blink" id="notification-badge">{{ unread_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            {% if request.user.profile_photo %}
+                                <span class="avatar avatar-sm" style="background-image: url('{{ request.user.profile_photo.url }}')"></span>
+                            {% else %}
+                                <span class="avatar avatar-sm bg-blue-lt">{{ request.user.username.0|upper }}</span>
+                            {% endif %}
+                            <div class="d-none d-xl-block ps-2">
+                                <div>{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <div class="mt-1 small text-muted">Management</div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <a href="{% url 'profile' %}" class="dropdown-item">Profile</a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-xl">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/js/tabler.min.js"></script>
+    <script>
+        {% if request.user.is_authenticated %}
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const notificationSocket = new WebSocket(
+                wsProtocol + '//' + window.location.host +
+                '/ws/notifications/'
+            );
+            notificationSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'notification') {
+                    const badge = document.getElementById('notification-badge');
+                    if(badge) {
+                        let count = parseInt(badge.innerText) || 0;
+                        badge.innerText = count + 1;
+                        badge.style.display = 'inline-block';
+                    } else { location.reload(); }
+                }
+            };
+        {% endif %}
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

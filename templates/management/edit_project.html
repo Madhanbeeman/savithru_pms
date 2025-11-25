@@ -1,0 +1,82 @@
+{% extends 'base_management.html' %}
+{% block title %}Edit Project{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header"><h3 class="mb-0">Edit Project: {{ project.name }}</h3></div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.errors %} <div class="invalid-feedback d-block">{{ form.name.errors|first }}</div> {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.client_name.label }}</label>
+                            {{ form.client_name }}
+                            {% if form.client_name.errors %} <div class="invalid-feedback d-block">{{ form.client_name.errors|first }}</div> {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %} <div class="invalid-feedback d-block">{{ form.description.errors|first }}</div> {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.priority.label }}</label>
+                            {{ form.priority }}
+                            {% if form.priority.errors %} <div class="invalid-feedback d-block">{{ form.priority.errors|first }}</div> {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.team_head.label }}</label>
+                            {{ form.team_head }}
+                            {% if form.team_head.errors %} <div class="invalid-feedback d-block">{{ form.team_head.errors|first }}</div> {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.start_date.label }}</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %} <div class="invalid-feedback d-block">{{ form.start_date.errors|first }}</div> {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.end_date.label }}</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %} <div class="invalid-feedback d-block">{{ form.end_date.errors|first }}</div> {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+                    <h5 class="mb-3">Uploads</h5>
+                    <p class="text-muted">To add/remove documents, please go to the Project Detail page.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.project_logo.label }}</label>
+                            {{ form.project_logo }}
+                            {% if form.project_logo.errors %} <div class="invalid-feedback d-block">{{ form.project_logo.errors|first }}</div> {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'project_list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

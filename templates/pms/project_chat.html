@@ -1,0 +1,242 @@
+{% extends base_template %}
+{% load static %}
+{% load pms_extras %}
+
+{% block title %}Group Chat: {{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container { display: flex; flex-direction: column; height: 75vh; background: #f0f2f5; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); }
+    .chat-header { background: #fff; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--tblr-border-color); }
+    .chat-messages { flex-grow: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; }
+    .chat-input { background: #f0f2f5; padding: 0.75rem 1.25rem; border-top: 1px solid var(--tblr-border-color); }
+    #attachment-preview { font-size: 0.8rem; padding: 5px; background: #e0e0e0; border-radius: 5px; display: none; margin-bottom: 10px; }
+    .avatar { border-radius: 50%; background-size: cover; background-position: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="d-flex align-items-center">
+                {% if project.project_logo %}
+                    <span class="avatar me-3" style="background-image: url('{{ project.project_logo.url }}')"></span>
+                {% else %}
+                    <span class="avatar me-3 bg-blue-lt">{{ project.name.0|upper }}</span>
+                {% endif %}
+                
+                <div>
+                    <h4 class="mb-0">{{ project.name }}</h4>
+                    <div class="text-muted small">Group Chat</div>
+                </div>
+                <div class="ms-auto">
+                    <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-outline-secondary me-2">View Details</a>
+                    <a href="{% url 'project_list' %}" class="btn btn-sm btn-secondary">Back</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages" data-project-id="{{ project.id }}">
+            {% for update in updates %}
+                {% include 'pms/partials/chat_bubble.html' with update=update request=request %}
+            {% empty %}
+                <p class="text-muted text-center" id="empty-message">No messages yet.</p>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input">
+            <div id="attachment-preview">
+                <span id="attachment-name"></span>
+                <button id="remove-attachment" type="button" class="btn-close btn-sm" style="float: right;"></button>
+            </div>
+            
+            <form method="POST" id="project-chat-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="image" id="chat-image-input" style="display: none;" accept="image/*">
+                <input type="file" name="file" id="chat-file-input" style="display: none;">
+                
+                <div class="input-group">
+                    <button class="btn" type="button" id="attach-file-btn" title="Attach file">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5" /></svg>
+                    </button>
+                    
+                    {{ chat_form.remarks }}
+                    
+                    <button class="btn btn-primary" type="submit" id="chat-message-submit">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('id_remarks');
+        const messageForm = document.getElementById('project-chat-form');
+        const currentUserId = {{ request.user.id }};
+        const projectID = chatMessages.dataset.projectId;
+
+        const attachBtn = document.getElementById('attach-file-btn');
+        const imageInput = document.getElementById('chat-image-input');
+        const fileInput = document.getElementById('chat-file-input');
+        const preview = document.getElementById('attachment-preview');
+        const previewName = document.getElementById('attachment-name');
+        const removePreview = document.getElementById('remove-attachment');
+        
+        let isSubmitting = false;
+
+        // --- COLOR LOGIC (Matching Python) ---
+        const colorPairs = [
+            {bg: '#e3f2fd', text: '#0d47a1'}, // Blue
+            {bg: '#f3e5f5', text: '#4a148c'}, // Purple
+            {bg: '#e8f5e9', text: '#1b5e20'}, // Green
+            {bg: '#fff3e0', text: '#e65100'}, // Orange
+            {bg: '#ffebee', text: '#b71c1c'}, // Red
+            {bg: '#e0f7fa', text: '#006064'}, // Cyan
+            {bg: '#fff8e1', text: '#ff6f00'}, // Amber
+            {bg: '#fce4ec', text: '#880e4f'}, // Pink
+        ];
+
+        function getUserColors(userId) {
+            const index = userId % colorPairs.length;
+            return colorPairs[index];
+        }
+        // -------------------------------------
+
+        function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+        scrollToBottom();
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const projectSocket = new WebSocket(wsProtocol + '//' + window.location.host + '/ws/project/' + projectID + '/updates/');
+
+        projectSocket.onopen = (e) => console.log("Chat connected.");
+
+        projectSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'project_update' && !data.title) {
+                const emptyMsg = document.getElementById('empty-message');
+                if (emptyMsg) emptyMsg.remove();
+
+                const isSender = (data.sender_id === currentUserId);
+                const senderInitial = data.sender_username.charAt(0).toUpperCase();
+                
+                // Get colors
+                const colors = getUserColors(data.sender_id);
+                const bubbleBg = isSender ? '#dcf8c6' : colors.bg;
+                const nameColor = colors.text;
+
+                const outerDiv = document.createElement('div');
+                outerDiv.classList.add('d-flex', 'mb-3');
+                if (isSender) outerDiv.classList.add('justify-content-end');
+                else outerDiv.classList.add('justify-content-start');
+
+                let bubbleHTML = '';
+                
+                if (!isSender) {
+                    if (data.sender_profile_photo) {
+                        bubbleHTML += `<span class="avatar avatar-sm me-2" style="background-image: url('${data.sender_profile_photo}')"></span>`;
+                    } else {
+                        bubbleHTML += `<span class="avatar avatar-sm me-2" style="background-color: ${nameColor}; color: white;">${senderInitial}</span>`;
+                    }
+                }
+
+                bubbleHTML += `<div class="message p-2 px-3 shadow-sm" style="border-radius: 10px; max-width: 75%; background-color: ${bubbleBg}; color: #111;">`;
+
+                if (!isSender) {
+                    bubbleHTML += `<div class="fw-bold mb-1" style="font-size: 0.75rem; color: ${nameColor};">${data.sender_username}</div>`;
+                }
+
+                if (data.image_url) {
+                    bubbleHTML += `<a href="${data.image_url}" target="_blank" class="d-block mb-2"><img src="${data.image_url}" alt="Image" style="max-width: 200px; border-radius: 5px;"></a>`;
+                }
+                
+                if (data.file_url) {
+                    bubbleHTML += `<a href="${data.file_url}" target="_blank" class="btn btn-sm btn-light d-flex align-items-center mb-2 border"><span class="ms-2 text-truncate" style="max-width: 150px;">${data.file_name}</span></a>`;
+                }
+
+                if (data.message) {
+                    bubbleHTML += `<div>${data.message.replace(/\n/g, '<br>')}</div>`;
+                }
+                
+                bubbleHTML += `<div class="text-end mt-1"><small class="message-timestamp" style="font-size: 0.65rem; opacity: 0.6;">${data.timestamp}</small></div>`;
+                bubbleHTML += `</div>`;
+                
+                outerDiv.innerHTML = bubbleHTML;
+                chatMessages.appendChild(outerDiv);
+                scrollToBottom();
+            }
+        };
+        
+        function submitForm() {
+            if (isSubmitting) return;
+            
+            const message = messageInput.value.trim();
+            const img = imageInput.files.length > 0;
+            const file = fileInput.files.length > 0;
+
+            if (!message && !img && !file) return;
+
+            isSubmitting = true;
+            const formData = new FormData(messageForm);
+
+            fetch(messageForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': messageForm.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    messageForm.reset(); 
+                    removePreview.click(); 
+                } else {
+                    console.error('Error:', data.errors);
+                }
+            })
+            .finally(() => {
+                isSubmitting = false;
+            });
+        }
+        
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitForm();
+        });
+        
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitForm();
+            }
+        });
+        
+        attachBtn.addEventListener('click', () => fileInput.click());
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            previewName.textContent = file.name;
+            preview.style.display = 'block';
+        }
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        imageInput.addEventListener('change', handleFileSelect);
+
+        removePreview.addEventListener('click', () => {
+            imageInput.value = '';
+            fileInput.value = '';
+            previewName.textContent = '';
+            preview.style.display = 'none';
+        });
+    });
+</script>
+{% endblock %}

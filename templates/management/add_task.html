@@ -1,0 +1,59 @@
+{% extends 'base_management.html' %}
+{% block title %}Add New Task{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h3 class="mb-0">Assign New Task</h3>
+                <small class="text-muted ms-2">for {{ member.username }} on {{ project.name }}</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <input type="hidden" name="project" value="{{ form.project.initial.id }}">
+                    <input type="hidden" name="assigned_to" value="{{ form.assigned_to.initial.id }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %} <div class="invalid-feedback d-block">{{ form.name.errors|first }}</div> {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %} <div class="invalid-feedback d-block">{{ form.description.errors|first }}</div> {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.status.label }}</label>
+                            {{ form.status }}
+                            {% if form.status.errors %} <div class="invalid-feedback d-block">{{ form.status.errors|first }}</div> {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.priority.label }}</label>
+                            {{ form.priority }}
+                            {% if form.priority.errors %} <div class="invalid-feedback d-block">{{ form.priority.errors|first }}</div> {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'manage_project_team' project_id=project.id %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

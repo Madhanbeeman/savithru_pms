@@ -1,0 +1,111 @@
+{% extends 'base_management.html' %}
+{% load static %}
+{% block title %}Assign Project Pages{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h3 class="mb-0">Assign Project to {{ member.username }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="task-page-form">
+                    {% csrf_token %}
+                    
+                    <h5>Project Details</h5>
+                    <p class="text-muted">{{ project.description|linebreaksbr|default:"No description." }}</p>
+                    
+                    <hr>
+
+                    <h5 class="mb-3">Task Pages</h5>
+                    <p class="text-muted">Add the pages or tasks this employee is responsible for.</p>
+
+                    {{ formset.management_form }}
+                    {% if formset.non_form_errors %}
+                        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+                    {% endif %}
+
+                    <div id="task-form-list">
+                        {% for form in formset %}
+                            <div class="task-form" id="task-form-{{ forloop.counter0 }}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-10">
+                                        <div class="mb-3">
+                                            {% if forloop.first %}
+                                                <label class="form-label">Task/Page Name</label>
+                                            {% endif %}
+                                            {{ form.page_name }}
+                                            {% if form.page_name.errors %} <div class="invalid-feedback d-block">{{ form.page_name.errors|first }}</div> {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        {% if forloop.counter0 > 0 %}
+                                            <button type="button" class="btn btn-danger btn-sm remove-task-form">X</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div id="empty-task-form" style="display: none;">
+                        <div class="task-form" id="task-form-__prefix__">
+                            <div class="row align-items-center">
+                                <div class="col-md-10">
+                                    <div class="mb-3">
+                                        {{ formset.empty_form.page_name }}
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-danger btn-sm remove-task-form">X</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" id="add-task-form" class="btn btn-outline-primary btn-sm">+ Add Task Page</button>
+
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'manage_project_team' project.id %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const formList = document.getElementById('task-form-list');
+        const addButton = document.getElementById('add-task-form');
+        const emptyFormTemplate = document.getElementById('empty-task-form').innerHTML;
+        const totalForms = document.getElementById('id_tasks-TOTAL_FORMS');
+        
+        let formCount = {{ formset.total_form_count }};
+
+        addButton.addEventListener('click', () => {
+            let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formCount);
+            let newFormElement = document.createElement('div');
+            newFormElement.innerHTML = newFormHtml;
+            formList.appendChild(newFormElement.firstElementChild);
+            
+            formCount++;
+            totalForms.value = formCount;
+        });
+
+        formList.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('remove-task-form')) {
+                let formToRemove = e.target.closest('.task-form');
+                if (formToRemove) {
+                    formToRemove.remove();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

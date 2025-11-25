@@ -1,0 +1,113 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Task: {{ task.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Task: {{ task.name }}</h2>
+        <small class="text-muted">Project: <a href="{% url 'project_detail' task.project.id %}">{{ task.project.name }}</a></small>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Task Update History</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'task_detail' task.id %}" id="task-update-form" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label fw-medium">{{ form.remarks.label }}</label>
+                        {{ form.remarks }}
+                        {% if form.remarks.errors %} <div class="invalid-feedback d-block">{{ form.remarks.errors|first }}</div> {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <button type="button" id="submit-task-update-btn" class="btn btn-primary">Add Update</button>
+                    </div>
+                </form>
+                
+                <hr>
+
+                <div class="list-group list-group-flush" id="task-timeline" data-task-id="{{ task.id }}">
+                    {% for update in updates %}
+                        {% include 'pms/partials/task_update_item.html' with update=update %}
+                    {% empty %}
+                        <p class="text-muted text-center p-3" id="task-timeline-empty-message">No updates for this task yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm project-details-card">
+            <div class="card-header">
+                <h5 class="mb-0">Task Details</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">{{ task.get_status_display }}</dd>
+                    
+                    <dt class="col-sm-4">Priority</dt>
+                    <dd class="col-sm-8">{{ task.get_priority_display }}</dd>
+
+                    <dt class="col-sm-4">Assigned To</dt>
+                    <dd class="col-sm-8">{{ task.assigned_to.username|default:"Not assigned" }}</dd>
+                    
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">{{ task.created_at|date:"Y-m-d" }}</dd>
+                </dl>
+                <hr>
+                <h6>Description</h6>
+                <p>{{ task.description|linebreaksbr|default:"No description provided." }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'js/task_update.js' %}"></script>
+
+<script>
+    const timeline = document.getElementById('task-timeline');
+    const taskID = timeline.dataset.taskId;
+    const wsProtocol = window.location.protocol === 'https': ? 'wss:' : 'ws:';
+    
+    const taskSocket = new WebSocket(
+        wsProtocol + '//' + window.location.host +
+        '/ws/task/' + taskID + '/updates/'
+    );
+
+    taskSocket.onopen = function(e) {
+        console.log("Task update socket connected.");
+    };
+
+    taskSocket.onclose = function(e) {
+        console.error('Task update socket closed.');
+    };
+
+    // This is called when the server sends a new update
+    taskSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'task_update') {
+            console.log("New task update received.");
+            
+            // Remove the "empty" message if it exists
+            const emptyMsg = document.getElementById('task-timeline-empty-message');
+            if (emptyMsg) {
+                emptyMsg.remove();
+            }
+            
+            // Add the new HTML (from the partial) to the top of the timeline
+            timeline.insertAdjacentHTML('afterbegin', data.html);
+        }
+    };
+</script>
+{% endblock %}

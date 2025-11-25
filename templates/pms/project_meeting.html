@@ -1,0 +1,88 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Meeting: {{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* This makes the meeting window fill the space */
+    #jitsi-meet-container {
+        height: 75vh; /* 75% of the viewport height */
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Project Meeting</h2>
+        <small class="text-muted">{{ project.name }}</small>
+    </div>
+    <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary btn-sm">Back to Project Details</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p class="text-muted">The meeting will appear below. Please allow browser permissions for your microphone and camera.</p>
+        
+        <div id="jitsi-meet-container"></div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://meet.jit.si/external_api.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('jitsi-meet-container');
+        
+        // 2. Get the room name and user info from Django
+        const roomName = "{{ jitsi_room_name|escapejs }}";
+        const userFullName = "{{ user_full_name|escapejs }}";
+        const userEmail = "{{ user_email|escapejs }}";
+
+        // 3. Set up the Jitsi options
+        const options = {
+            roomName: roomName,
+            width: '100%',
+            height: '100%',
+            parentNode: container,
+            // Pre-fill the user's name
+            userInfo: {
+                email: userEmail,
+                displayName: userFullName
+            },
+            // Hide some of the Jitsi branding
+            configOverwrite: {
+                prejoinPageEnabled: false,
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+            },
+            interfaceConfigOverwrite: {
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                SHOW_BRAND_WATERMARK: false,
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'desktop', 'chat', 'raisehand',
+                    'participants-pane', 'tileview', 'fullscreen', 'hangup'
+                ],
+            }
+        };
+        
+        // 4. Create the Jitsi API instance
+        const api = new JitsiMeetExternalAPI("meet.jit.si", options);
+
+        // You can add event listeners here if needed
+        api.addEventListener('videoConferenceLeft', () => {
+            // When user clicks "hang up", send them back to the project page
+            window.location.href = "{% url 'project_detail' project.id %}";
+        });
+    });
+</script>
+{% endblock %}

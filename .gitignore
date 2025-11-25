@@ -1,0 +1,16 @@
+# Virtual Environment
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables (Security!)
+.env
+
+# Database (if using SQLite)
+db.sqlite3
+
+# Media files (Optional - usually you don't commit large uploads)
+media/

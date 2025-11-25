@@ -1,0 +1,123 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Overview</div>
+            <h2 class="page-title">Welcome, {{ request.user.first_name|default:request.user.username }}!</h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+            <a href="{% url 'add_daily_update' %}" class="btn btn-primary d-none d-sm-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                Add Daily Update
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row row-deck row-cards">
+    
+    <div class="col-sm-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Pending Tasks</div>
+                </div>
+                <div class="h1 mb-3">{{ my_tasks.count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Active Projects</div>
+                </div>
+                <div class="h1 mb-3">{{ projects.count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">My Pending Tasks</h3>
+            </div>
+            <div class="list-group list-group-flush list-group-hoverable">
+                {% for task in my_tasks %}
+                <div class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="status-dot status-dot-animated bg-red d-block"></span>
+                        </div>
+                        <div class="col text-truncate">
+                            <a href="#" class="text-reset d-block">{{ task.page_name }}</a>
+                            <div class="d-block text-muted text-truncate mt-n1">
+                                {{ task.project.name }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <form method="POST" action="{% url 'complete_task_page' task.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Mark Complete">
+                                    Check
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-green" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+                    <p>All tasks completed!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">My Projects</h3>
+            </div>
+            <div class="list-group list-group-flush list-group-hoverable">
+                {% for project in projects %}
+                <div class="list-group-item {% if project.is_urgent %}project-urgent{% endif %}">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="avatar" style="{% if project.project_logo %}background-image: url({{ project.project_logo.url }}){% else %}background-color: #e0e0e0{% endif %}">
+                                {% if not project.project_logo %}{{ project.name.0 }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="col text-truncate">
+                            <a href="{% url 'project_detail' project.id %}" class="text-reset d-block">
+                                {{ project.name }}
+                                {% if project.is_urgent %}
+                                    <span class="badge badge-blink bg-red-lt ms-2">Due Soon</span>
+                                {% endif %}
+                            </a>
+                            <div class="d-block text-muted text-truncate mt-n1">
+                                End: <span class="{% if project.is_urgent %}text-danger fw-bold{% endif %}">{{ project.end_date|date:"M d" }}</span> 
+                                | Role: {% if project.team_head == request.user %}Team Head{% else %}Member{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-icon btn-ghost-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted">You have not been assigned to any projects yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

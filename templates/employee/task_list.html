@@ -1,0 +1,59 @@
+{% extends 'base_employee.html' %}
+
+{% block title %}My Tasks{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title mb-0">My Task Pages</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="list-group list-group-flush">
+            {% for task in tasks_page %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-medium">{{ task.page_name }}</span>
+                        <small class="d-block text-muted">Project: {{ task.project.name }}</small>
+                    </div>
+                    <small class="text-muted">{{ task.created_at|timesince }} ago</small>
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item">
+                <p class="text-muted text-center mb-0">You have not been assigned any task pages.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if tasks_page.has_other_pages %}
+<div class="card mt-3">
+    <div class="card-body">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-0">
+                {% if tasks_page.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ tasks_page.previous_page_number }}">Previous</a></li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Previous</a></li>
+                {% endif %}
+
+                {% for i in tasks_page.paginator.page_range %}
+                    <li class="page-item {% if i == tasks_page.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                {% endfor %}
+
+                {% if tasks_page.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ tasks_page.next_page_number }}">Next</a></li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

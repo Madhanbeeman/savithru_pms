@@ -1,0 +1,277 @@
+{% extends base_template %}
+{% load static %}
+{% load pms_extras %}
+
+{% block title %}Group Chat: {{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 75vh; 
+        background: #f0f2f5;
+        border: 1px solid var(--tblr-border-color);
+        border-radius: var(--tblr-border-radius);
+    }
+    .chat-header {
+        background: #fff;
+        padding: 0.75rem 1.25rem;
+        border-bottom: 1px solid var(--tblr-border-color);
+    }
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-input {
+        background: #f0f2f5;
+        padding: 0.75rem 1.25rem;
+        border-top: 1px solid var(--tblr-border-color);
+    }
+    #attachment-preview {
+        font-size: 0.8rem;
+        padding: 5px;
+        background: #e0e0e0;
+        border-radius: 5px;
+        display: none;
+    }
+    /* --- NEW: Make avatars circular --- */
+    .avatar {
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="d-flex align-items-center">
+                {% if project.project_logo %}
+                    <span class="avatar me-3" style="background-image: url({{ project.project_logo.url }})"></span>
+                {% else %}
+                    <span class="avatar me-3">{{ project.name.0|upper }}</span>
+                {% endif %}
+                <div>
+                    <h4 class="mb-0">{{ project.name }}</h4>
+                    <div class="text-muted small">Group Chat</div>
+                </div>
+                <div class="ms-auto">
+                    <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-outline-secondary me-2">View Details</a>
+                    <a href="{% url 'project_list' %}" class="btn btn-sm btn-secondary">Back to Projects</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages" data-project-id="{{ project.id }}">
+            {% for update in updates %}
+                {% include 'pms/partials/chat_bubble.html' with update=update request=request %}
+            {% empty %}
+                <p class="text-muted text-center" id="empty-message">No messages yet. Start the conversation!</p>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input">
+            <div id="attachment-preview" class="mb-2">
+                <span id="attachment-name"></span>
+                <button id="remove-attachment" class="btn-close btn-sm" style="float: right;"></button>
+            </div>
+            
+            <form method="POST" id="project-chat-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ chat_form.image }}
+                {{ chat_form.file }}
+                
+                <div class="input-group">
+                    <button class="btn" type="button" id="attach-file-btn" title="Attach file">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-paperclip" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5" /></svg>
+                    </button>
+                    <button class="btn" type="button" id="emoji-btn" title="Emoji">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-mood-smile" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 10l.01 0" /><path d="M15 10l.01 0" /><path d="M9.5 15a3.5 3.5 0 0 0 5 0" /></svg>
+                    </button>
+                    
+                    {{ chat_form.remarks }}
+                    <button class="btn btn-primary" type="submit" id="chat-message-submit">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('id_remarks');
+        const messageForm = document.getElementById('project-chat-form');
+        const currentUserId = {{ request.user.id }};
+        const projectID = chatMessages.dataset.projectId;
+        const attachBtn = document.getElementById('attach-file-btn');
+        const imageInput = document.getElementById('chat-image-input');
+        const fileInput = document.getElementById('chat-file-input');
+        const preview = document.getElementById('attachment-preview');
+        const previewName = document.getElementById('attachment-name');
+        const removePreview = document.getElementById('remove-attachment');
+        
+        let attachedFile = null; 
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        scrollToBottom();
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const projectSocket = new WebSocket(
+            wsProtocol + '//' + window.location.host +
+            '/ws/project/' + projectID + '/updates/'
+        );
+
+        projectSocket.onopen = (e) => console.log("Project chat socket connected.");
+        projectSocket.onclose = (e) => console.error('Project chat socket closed.');
+
+        // --- 3. Receive new messages (Handles Attachments & Colors) ---
+        projectSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'project_update') {
+                const emptyMsg = document.getElementById('empty-message');
+                if (emptyMsg) { emptyMsg.remove(); }
+
+                const isSender = (data.sender_id === currentUserId);
+                const messageClass = isSender ? 'message-sent' : 'message-received';
+                const senderName = data.sender_username.charAt(0).toUpperCase();
+
+                // Create the outer wrapper (for avatar + bubble)
+                const outerDiv = document.createElement('div');
+                outerDiv.classList.add('d-flex', 'mb-3');
+                if (isSender) {
+                    outerDiv.classList.add('justify-content-end');
+                } else {
+                    outerDiv.classList.add('justify-content-start');
+                }
+
+                // --- Build the HTML for the new bubble ---
+                let bubbleHTML = '';
+
+                // Add avatar (if not sender)
+                if (!isSender) {
+                    bubbleHTML += `<span class="avatar avatar-sm me-2">${senderName}</span>`;
+                }
+
+                // Start message bubble
+                bubbleHTML += `<div class="message ${messageClass}">`;
+
+                // Add colored name (if not sender)
+                if (!isSender) {
+                    bubbleHTML += `<div class="fw-bold mb-1" style="color: ${data.user_color};">${data.sender_username}</div>`;
+                }
+
+                // Add Image
+                if (data.image_url) {
+                    bubbleHTML += `
+                        <a href="${data.image_url}" target="_blank" class="d-block mb-2">
+                            <img src="${data.image_url}" alt="Attachment" style="max-width: 250px; height: auto; border-radius: 5px;">
+                        </a>
+                    `;
+                }
+                
+                // Add File
+                if (data.file_url) {
+                    bubbleHTML += `
+                        <a href="${data.file_url}" target="_blank" class="btn btn-sm btn-outline-secondary d-flex align-items-center mb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /></svg>
+                            <span class="ms-2">${data.file_name}</span>
+                        </a>
+                    `;
+                }
+
+                // Add Text
+                if (data.message) {
+                    bubbleHTML += `<div>${data.message.replace(/\n/g, '<br>')}</div>`;
+                }
+                
+                bubbleHTML += `<span class="message-timestamp">${data.timestamp}</span>`;
+                bubbleHTML += `</div>`; // Close .message
+                
+                outerDiv.innerHTML = bubbleHTML;
+                chatMessages.appendChild(outerDiv);
+                scrollToBottom();
+            }
+        };
+        
+        // --- 4. Send new messages (Handles FormData) ---
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(messageForm);
+            
+            // Check if there is anything to send
+            if (!formData.get('remarks') && !formData.get('image') && !formData.get('file')) {
+                return; 
+            }
+
+            fetch(messageForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': messageForm.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    messageForm.reset(); 
+                    removePreview.click(); 
+                } else {
+                    console.error('Error sending message:', data.errors);
+                    alert("Error: " + (data.errors || "Could not send message."));
+                }
+            });
+        });
+        
+        messageInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // --- 5. New Attachment Button Logic ---
+        attachBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type.startsWith('image/')) {
+                imageInput.files = event.target.files;
+                fileInput.value = ''; 
+            } else {
+                fileInput.files = event.target.files;
+                imageInput.value = ''; 
+            }
+            
+            previewName.textContent = file.name;
+            preview.style.display = 'block';
+        }
+        
+        imageInput.addEventListener('change', handleFileSelect);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        removePreview.addEventListener('click', () => {
+            imageInput.value = '';
+            fileInput.value = '';
+            previewName.textContent = '';
+            preview.style.display = 'none';
+        });
+
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Issue from {{ issue.user.username }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title mb-0">Issue from {{ issue.user.get_full_name|default:issue.user.username }}</h1>
+    <a href="{% url 'issues' %}" class="btn btn-secondary">Back to Issue List</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">{{ issue.get_subject_display }}</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            From: {{ issue.user.email|default:"No email" }}<br>
+            Submitted: {{ issue.created_at|date:"F d, Y \a\t H:i" }}
+        </p>
+        
+        <hr>
+        
+        <div style="white-space: pre-wrap;">{{ issue.description }}</div>
+        
+        {% if issue.attachment %}
+        <hr>
+        <strong>Attachment:</strong>
+        <a href="{{ issue.attachment.url }}" target="_blank" class="btn btn-outline-primary btn-sm ms-2">
+            Download Attached File
+        </a>
+        {% endif %}
+    </div>
+    
+    {% if issue.status == 'PENDING' %}
+    <div class="card-footer">
+        <h4 class="mb-3">Take Action</h4>
+        <p class="text-muted">This will send a notification to the employee with the new status.</p>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="btn-group">
+                <button type="submit" name="action" value="accept" class="btn btn-success">Accept</button>
+                <button type="submit" name="action" value="decline" classG"btn btn-danger">Decline</button>
+                {% if issue.subject == 'WFH' %}
+                <button type="submit" name="action" value="wfh" class="btn btn-info">Approve Work From Home</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="card-footer">
+        <p class="text-muted mb-0">
+            This issue was already actioned. Current status: <strong>{{ issue.get_status_display }}</strong>
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

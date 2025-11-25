@@ -1,0 +1,6 @@
+<div class="list-group-item">
+    <p class="mb-1">{{ update.remarks|linebreaksbr }}</p>
+    <small class="text-muted">
+        By: {{ update.user.username|default:"Unknown" }} | {{ update.created_at|timesince }} ago
+    </small>
+</div>

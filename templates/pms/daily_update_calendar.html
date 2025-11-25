@@ -1,0 +1,139 @@
+{% extends base_template %}
+{% load static %}
+{% load pms_extras %}
+
+{% block title %}Calendar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container { max-width: 1200px; margin: auto; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .calendar-header h1 { font-size: 2.5rem; font-weight: 700; margin: 0; }
+    .calendar-nav a { font-size: 2.5rem; font-weight: 700; text-decoration: none; color: var(--tblr-primary); opacity: 0.7; transition: opacity 0.2s; }
+    .calendar-nav a:hover { opacity: 1; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .calendar-day-name { font-weight: 600; color: var(--tblr-secondary); font-size: 0.8rem; text-transform: uppercase; padding-bottom: 0.5rem; text-align: center; }
+    .calendar-day { position: relative; padding-bottom: 100%; height: 0; background-color: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s ease-in-out; }
+    .calendar-day:hover { background-color: var(--tblr-bg-surface-hover); transform: scale(1.02); }
+    .calendar-day.empty { background: var(--tblr-bg-surface-tertiary); border: none; cursor: default; }
+    .calendar-day.today { border: 2px solid var(--tblr-primary) !important; }
+    .day-content { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 0.75rem; display: flex; flex-direction: column; overflow: hidden; }
+    .day-number { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+    .update-indicator { margin-top: auto; text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    
+    <div class="calendar-header">
+        <div class="calendar-nav">
+            <a href="{% url 'calendar_view_nav' year=prev_month_date.year month=prev_month_date.month %}">&lt;</a>
+        </div>
+        
+        <h1>
+            {% if viewing_employee %}
+                {{ viewing_employee.username }}'s Calendar
+            {% else %}
+                My Calendar
+            {% endif %}
+            <span class="text-muted">({{ month_name }} {{ year }})</span>
+        </h1>
+        
+        <div class="calendar-nav">
+            <a href="{% url 'calendar_view_nav' year=next_month_date.year month=next_month_date.month %}">&gt;</a>
+        </div>
+    </div>
+
+    <div class="calendar-grid mb-2">
+        <div class="calendar-day-name">Mon</div>
+        <div class="calendar-day-name">Tue</div>
+        <div class="calendar-day-name">Wed</div>
+        <div class="calendar-day-name">Thu</div>
+        <div class="calendar-day-name">Fri</div>
+        <div class="calendar-day-name">Sat</div>
+        <div class="calendar-day-name">Sun</div>
+    </div>
+
+    <div class="calendar-grid">
+        {% for week in month_days %}
+            {% for day in week %}
+                {% if day == 0 %}
+                    <div class="calendar-day empty"></div>
+                {% else %}
+                    <div class="calendar-day {% if day == today_num %}today{% endif %}" 
+                         {% if day in updates_dict %}data-bs-toggle="modal" data-bs-target="#viewUpdateModal-{{ day }}"{% endif %}>
+                        
+                        <div class="day-content">
+                            <span class="day-number">{{ day }}</span>
+                            
+                            {% if day in updates_dict %}
+                                <div class="update-indicator">
+                                    {% with count=updates_dict|get_item:day|length %}
+                                        <span class="badge bg-success-lt">{{ count }} Update{% if count > 1 %}s{% endif %}</span>
+                                    {% endwith %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if day in updates_dict %}
+                    <div class="modal modal-blur fade" id="viewUpdateModal-{{ day }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Updates for {{ day }} {{ month_name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                                    {% with daily_updates=updates_dict|get_item:day %}
+                                        {% for update in daily_updates %}
+                                            <div class="card mb-3 border">
+                                                <div class="card-header d-flex justify-content-between">
+                                                    <h3 class="card-title">Update #{{ forloop.counter }}</h3>
+                                                    <span class="text-muted">{{ update.created_at|date:"h:i A" }}</span>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p><strong>Remarks:</strong><br> {{ update.description|default:"-"|linebreaksbr }}</p>
+                                                    
+                                                    {% if update.line_items.all %}
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-striped">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Project</th>
+                                                                    <th>Task</th>
+                                                                    <th class="text-end">Time</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for item in update.line_items.all %}
+                                                                <tr>
+                                                                    <td>{{ item.project.name }}</td>
+                                                                    <td>{{ item.task_page.page_name }}</td>
+                                                                    <td class="text-end">{{ item.time_spent }}</td>
+                                                                </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

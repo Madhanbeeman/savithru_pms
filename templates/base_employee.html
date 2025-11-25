@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Employee{% endblock %} - Savithru PMS</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler-vendors.min.css" rel="stylesheet" />
+
+    <style>
+        :root { --tblr-primary: #206bc4; }
+        body { background-color: #f8f9fa; }
+        .navbar-vertical { background: #fff; border-right: 1px solid #e6e8e9; }
+        .chat-container { height: 75vh; }
+        .message { border-radius: 10px !important; border: none !important; }
+        .message-sent { background-color: #e7f5e9 !important; color: #111 !important; }
+        .message-received { background-color: #ffffff !important; color: #111 !important; }
+        .avatar { border-radius: 50%; }
+        .badge-blink { animation: blink 2s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="theme-light">
+    <div class="page">
+        <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="light">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand">
+                    <a href="{% url 'project_list' %}" class="text-decoration-none text-primary">Savithru PMS</a>
+                </h1>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        
+                        <li class="nav-item {% if 'dashboard' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'employee_dashboard' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dashboard" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M13.45 11.55l2.05 -2.05" /><path d="M6.4 20a9 9 0 1 1 11.2 0z" /></svg>
+                                </span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item {% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'project_list' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-layout-dashboard" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h6v8h-6z" /><path d="M4 16h6v4h-6z" /><path d="M14 12h6v8h-6z" /><path d="M14 4h6v4h-6z" /></svg></span>
+                                <span class="nav-link-title">My Projects</span>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item {% if 'add_daily_update' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'add_daily_update' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-plus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg></span>
+                                <span class="nav-link-title">Daily Updates</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item {% if 'calendar' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'calendar_view' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M11 15h1" /><path d="M12 15v3" /></svg></span>
+                                <span class="nav-link-title">Calendar</span>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item {% if 'issue' in request.resolver_match.url_name %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'issues' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg></span>
+                                <span class="nav-link-title">Issues</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
+            <div class="container-xl">
+                <div class="navbar-nav flex-row order-md-last">
+                    
+                    <div class="nav-item me-3">
+                        <a href="{% url 'notification_list' %}" class="nav-link px-0" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>
+                            {% if unread_count > 0 %}
+                            <span class="badge bg-red rounded-pill badge-blink" id="notification-badge">{{ unread_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            {% if request.user.profile_photo %}
+                                <span class="avatar avatar-sm" style="background-image: url('{{ request.user.profile_photo.url }}')"></span>
+                            {% else %}
+                                <span class="avatar avatar-sm bg-green-lt">{{ request.user.username.0|upper }}</span>
+                            {% endif %}
+                            <div class="d-none d-xl-block ps-2">
+                                <div>{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <div class="mt-1 small text-muted">
+                                    {% if request.user.headed_projects.exists %}Project Manager{% else %}Employee{% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <a href="{% url 'profile' %}" class="dropdown-item">Profile</a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-xl">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/js/tabler.min.js" defer></script>
+    
+    <script>
+        {% if request.user.is_authenticated %}
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const notificationSocket = new WebSocket(
+                wsProtocol + '//' + window.location.host +
+                '/ws/notifications/'
+            );
+            notificationSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'notification') {
+                    const badge = document.getElementById('notification-badge');
+                    if (badge) {
+                        let count = parseInt(badge.innerText) || 0;
+                        badge.innerText = count + 1;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        location.reload(); 
+                    }
+                }
+            };
+        {% endif %}
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

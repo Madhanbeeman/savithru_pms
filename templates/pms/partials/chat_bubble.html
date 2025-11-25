@@ -1,0 +1,51 @@
+{% load static %}
+{% load pms_extras %}
+
+<div class="d-flex mb-3 {% if update.user == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+    
+    {% if update.user != request.user %}
+        {% if update.user.profile_photo %}
+            <span class="avatar avatar-sm me-2" style="background-image: url('{{ update.user.profile_photo.url }}')"></span>
+        {% else %}
+            <span class="avatar avatar-sm me-2" style="background-color: {{ update.user.id|get_user_text_color }}; color: white;">
+                {{ update.user.username.0|upper }}
+            </span>
+        {% endif %}
+    {% endif %}
+
+    <div class="message p-2 px-3 shadow-sm" 
+         style="border-radius: 10px; max-width: 75%; 
+         {% if update.user == request.user %}
+            background-color: #dcf8c6; color: #111; /* Standard Green for Me */
+         {% else %}
+            background-color: {{ update.user.id|get_user_bg_color }}; color: #111; /* Dynamic Color for Others */
+         {% endif %}">
+        
+        {% if update.user != request.user %}
+            <div class="fw-bold mb-1" style="font-size: 0.75rem; color: {{ update.user.id|get_user_text_color }};">
+                {{ update.user.username|default:"Unknown" }}
+            </div>
+        {% endif %}
+
+        {% if update.image %}
+        <a href="{{ update.image.url }}" target="_blank" class="d-block mb-2">
+            <img src="{{ update.image.url }}" alt="Attachment" style="max-width: 200px; border-radius: 5px;">
+        </a>
+        {% endif %}
+
+        {% if update.file %}
+        <a href="{{ update.file.url }}" target="_blank" class="btn btn-sm btn-light d-flex align-items-center mb-2 border">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /></svg>
+            <span class="ms-2 text-truncate" style="max-width: 150px;">{{ update.file.name|cut:"project_chat_files/" }}</span>
+        </a>
+        {% endif %}
+
+        {% if update.remarks %}
+        <div>{{ update.remarks|linebreaksbr }}</div>
+        {% endif %}
+
+        <div class="text-end mt-1">
+            <span class="message-timestamp" style="font-size: 0.65rem; opacity: 0.6;">{{ update.created_at|date:"h:i A" }}</span>
+        </div>
+    </div>
+</div>

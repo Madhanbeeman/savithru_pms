@@ -1,0 +1,141 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}New Daily Update{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">New Daily Update</h3>
+                <a href="{% url 'calendar_view' %}" class="btn btn-sm btn-outline-secondary">View History</a>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="update-form">
+                    {% csrf_token %}
+                    
+                    <h4 class="mb-3">Tasks & Time</h4>
+                    
+                    {{ formset.management_form }}
+                    
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%">Project</th>
+                                    <th style="width: 40%">Task</th>
+                                    <th style="width: 15%">Time (e.g., 2 hrs)</th>
+                                    <th style="width: 5%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="formset-container">
+                                {% for form in formset %}
+                                <tr class="form-row">
+                                    <td>
+                                        {{ form.id }}
+                                        {{ form.project }}
+                                        {% if form.project.errors %}<div class="text-danger small">{{ form.project.errors }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        {{ form.task_page }}
+                                    </td>
+                                    <td>
+                                        {{ form.time_spent }}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-icon btn-danger btn-sm remove-row" title="Remove Task">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-row-btn">
+                        + Add Another Task
+                    </button>
+                    
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.description.label }}</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" name="submit_daily_update" class="btn btn-primary">Submit Update</button>
+                    </div>
+                </form>
+                
+                <div id="empty-form" style="display:none">
+                    <table>
+                        <tr class="form-row">
+                            <td>{{ formset.empty_form.project }}</td>
+                            <td>{{ formset.empty_form.task_page }}</td>
+                            <td>{{ formset.empty_form.time_spent }}</td>
+                            <td>
+                                <button type="button" class="btn btn-icon btn-danger btn-sm remove-row">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('formset-container');
+        const addBtn = document.getElementById('add-row-btn');
+        const totalForms = document.getElementById('id_line_items-TOTAL_FORMS'); 
+        const emptyFormHtml = document.getElementById('empty-form').querySelector('tr').outerHTML;
+
+        // Add Row
+        addBtn.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const newRowHtml = emptyFormHtml.replace(/__prefix__/g, formCount);
+            container.insertAdjacentHTML('beforeend', newRowHtml);
+            totalForms.value = formCount + 1;
+            bindProjectChangeEvents();
+        });
+
+        // Remove Row
+        container.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-row')) {
+                e.target.closest('.form-row').remove();
+            }
+        });
+
+        // AJAX for Task Dropdown
+        function bindProjectChangeEvents() {
+            const projectSelects = document.querySelectorAll('.project-select');
+            projectSelects.forEach(select => {
+                if (select.getAttribute('data-bound') === 'true') return;
+                select.setAttribute('data-bound', 'true');
+
+                select.addEventListener('change', function() {
+                    const url = "{% url 'ajax_load_tasks' %}";
+                    const projectId = this.value;
+                    const row = this.closest('tr');
+                    const taskSelect = row.querySelector('.task-select');
+
+                    fetch(`${url}?project_id=${projectId}`)
+                        .then(response => response.text())
+                        .then(html => {
+                            taskSelect.innerHTML = html;
+                        });
+                });
+            });
+        }
+        bindProjectChangeEvents();
+    });
+</script>
+{% endblock %}

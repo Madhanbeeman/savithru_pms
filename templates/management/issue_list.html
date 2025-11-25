@@ -1,0 +1,44 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}View Issues{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title mb-0">Pending Issues</h1>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">All Pending Employee Issues</h3>
+    </div>
+    <div class="card-body">
+        <div class="list-group list-group-flush">
+            {% for issue in issues %}
+            <a href="{% url 'issue_detail' issue.id %}" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-medium">{{ issue.get_subject_display }}</span>
+                        <small class="d-block text-muted">From: {{ issue.user.get_full_name|default:issue.user.username }}</small>
+                    </div>
+                    <small class="text-muted">{{ issue.created_at|timesince }} ago</small>
+                </div>
+                <p class="text-muted mt-2 mb-0">{{ issue.description|truncatewords:20 }}</p>
+            </a>
+            {% empty %}
+            <div class="list-group-item">
+                <p class="text-muted text-center mb-0">No pending issues. All clear!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
